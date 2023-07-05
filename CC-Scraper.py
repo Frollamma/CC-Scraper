@@ -10,6 +10,7 @@ s.headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/2010010
 
 
 def login(email, password):
+    print(f"Logging in with email {email} and password {password}")
     res = s.post(base_url + "/api/login",
                  json={"email": email, "password": password})
 
@@ -28,16 +29,16 @@ def main():
     parser = argparse.ArgumentParser(
         description="CLI for logging in with email and password")
     parser.add_argument('-e', '--email', type=str,
-                        help="Your CCIT email", required=True)
+                        help="Your CCIT email")
     parser.add_argument('-p', '--password', type=str,
-                        help="Your password", required=True)
+                        help="Your password")
 
     args = parser.parse_args()
 
-    try:
-        email = args.email
-        password = args.password
-    except ArgumentError:
+    email = args.email
+    password = args.password
+
+    if not (email and password):
         with open("auth.json", "r") as f:
             data = json.load(f)
 
@@ -52,14 +53,17 @@ def main():
     res = login(email, password)
 
     try:
-        token, files_token = res.json()
+        data = res.json()
+        print(data)
+        # token, files_token
     except Exception as e:
         print("Failed authentication")
-        print(e)
         print(f"{res.text = }")
+        raise e
     else:
         s.headers["authorization"] = f"Token {token}"
 
+    get_challenge(256)
 
 if __name__ == '__main__':
     main()
