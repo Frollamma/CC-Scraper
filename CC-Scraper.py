@@ -1,8 +1,8 @@
 import argparse
 from argparse import ArgumentError
-
 import requests
 import json
+import os
 
 BASE_URL = "https://ctf.cyberchallenge.it"
 s = requests.Session()
@@ -114,13 +114,35 @@ def parse_challenge(challenge):
     
     return challenge_id, name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
     
+def download_file(file_dict, file_path):
+    file_name = file_dict["name"]
+    file_url = file_dict["url"]
+
+    # When you download a file you use a url like this: https://ctf.cyberchallenge.it/api/file/514c93c2-5dab-498e-90db-de7e2a0ca5d6/chall2.pcap?download=&auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ODUzLCJpYXQiOjE2ODg2Mzg5MzksImV4cCI6MTY4ODY4MjEzOX0.ald2V0Dl07-lW-f6soGlSC9mP3n_AVZ3D-1zGX9VKhw, while the "files" part in the response of the challenge view is like this:
+    # {
+    #     "files": [
+    #         {
+    #             "name": "chall2.pcap",
+    #             "url": "/api/file/514c93c2-5dab-498e-90db-de7e2a0ca5d6/chall2.pcap?download"
+    #         }
+    #     ]
+    # }
+    # eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ODUzLCJpYXQiOjE2ODg2Mzg5MzgsImV4cCI6MTY4ODY4MjEzOH0.CcFThFfyNHoMGkvRZeyQOjQuC7NQP876aNw8LlaNkeQ
+
+    res = s.get(BASE_URL + file_url)
+    file_content = res.content
+    path = os.path.join(file_path, file_name)
+
+    with open(path, "wb") as f:
+        f.write(file_content)
 
 def scrape_challenge(partial_challenge):
-    challenge_id, name, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden = parse_partial_challenge(partial_challenge)
+    challenge_id, challenge_name, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden = parse_partial_challenge(partial_challenge)
 
     challenge = get_challenge(challenge_id)
-    challenge_id, name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = parse_challenge(challenge)
+    challenge_id, challenge_name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = parse_challenge(challenge)
 
+    return challenge_id, challenge_name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
     
 
 def main():
@@ -138,13 +160,25 @@ def main():
     game_paused, events = get_challenges()
     
     for event in events:
+        path = event
+        os.mkdir(path)
         event_id, name, sections = parse_event(event)
 
         for section in sections:
+            path = os.path.join(event, section)
+            os.mkdir(path)
             section_id, name, challenges = parse_section(section)
 
             for challenge in challenges:
-                scrape_challenge(challenge)
+                challenge_id, challenge_name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = scrape_challenge(challenge)
+                path = os.path.join(event, section, challenge_name)
+                os.mkdir(path)
+
+                for file in files:
+                    print("Downloading file", file, " in ", path)
+                    download_file(file, path)
+
+
 
 
 if __name__ == '__main__':
