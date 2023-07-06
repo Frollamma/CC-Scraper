@@ -82,7 +82,6 @@ def parse_event(event):
     return event_id, name, sections
 
 def parse_section(section):
-    print(f"{section = }")
     section_id = section["id"]
     name = section["name"]
     challenges = section["challenges"]
@@ -149,7 +148,6 @@ def scrape_challenge(partial_challenge):
     challenge_id, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden = parse_partial_challenge(partial_challenge)
 
     challenge = get_challenge(challenge_id)
-    print(f"{challenge = }")
     challenge_id, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = parse_challenge(challenge)
 
     return challenge_id, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
@@ -182,7 +180,6 @@ def main():
     try:
         os.mkdir(BASE_DOWNLOADS_DIR)
     except Exception as e:
-        # raise e
         pass
 
     for event in events:
@@ -193,7 +190,7 @@ def main():
         try:
             os.mkdir(path)
         except Exception as e:
-            raise e
+            # raise e
             pass
 
         for section in sections:
@@ -204,7 +201,7 @@ def main():
             try:
                 os.mkdir(path)
             except Exception as e:
-                raise e
+                # raise e
                 pass
 
             for challenge in challenges:
@@ -216,7 +213,7 @@ def main():
                 try:
                     os.mkdir(path)
                 except Exception as e:
-                    raise e
+                    # raise e
                     pass
 
                 save_description(challenge_name, description, path)
@@ -226,7 +223,7 @@ def main():
                     try:
                         download_file(file, path)
                     except Exception as e:
-                        raise e
+                        # raise e
                         pass
 
 
