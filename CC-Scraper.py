@@ -4,6 +4,7 @@ import requests
 import json
 import os
 
+BASE_DOWNLOADS_DIR = "downloads"
 BASE_URL = "https://ctf.cyberchallenge.it"
 s = requests.Session()
 s.headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/115.0"
@@ -81,6 +82,7 @@ def parse_event(event):
     return event_id, name, sections
 
 def parse_section(section):
+    print(f"{section = }")
     section_id = section["id"]
     name = section["name"]
     challenges = section["challenges"]
@@ -96,12 +98,11 @@ def parse_partial_challenge(challenge):
     current_global_solves = challenge["currentGlobalSolves"]
     hidden = challenge["hidden"]
     
-    return challenge_id, name, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden
+    return challenge_id, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden
 
 
 def parse_challenge(challenge):
     challenge_id = challenge["id"]
-    name = challenge["name"]
     title = challenge["title"]
     description = challenge["description"]
     files = challenge["files"]
@@ -112,7 +113,7 @@ def parse_challenge(challenge):
     current_global_solves = challenge["currentGlobalSolves"]
     solves = challenge["solves"]
     
-    return challenge_id, name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
+    return challenge_id, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
     
 def download_file(file_dict, file_path):
     file_name = file_dict["name"]
@@ -137,18 +138,26 @@ def download_file(file_dict, file_path):
         f.write(file_content)
 
 def scrape_challenge(partial_challenge):
-    challenge_id, challenge_name, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden = parse_partial_challenge(partial_challenge)
+    challenge_id, title, tags, current_score, current_affiliation_solves, current_global_solves, hidden = parse_partial_challenge(partial_challenge)
 
     challenge = get_challenge(challenge_id)
-    challenge_id, challenge_name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = parse_challenge(challenge)
+    print(f"{challenge = }")
+    challenge_id, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = parse_challenge(challenge)
 
-    return challenge_id, challenge_name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
+    return challenge_id, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
     
+def sanitize_name(path: str):
+    forbidden_chars = ["\\", "/", ":", "*", "?", "%", '"', "<", ">", "|"]
+
+    for forbidden_char in forbidden_chars:
+        path = path.replace(forbidden_char, "")
+
+    return path
 
 def main():
     args = get_args()
     email, password = get_auth_details(args)
-    selected_events = args.events
+    # selected_events = args.events
     selected_events = "*" # TEMP
 
     if selected_events != "*":
@@ -159,24 +168,52 @@ def main():
 
     game_paused, events = get_challenges()
     
+    global BASE_DOWNLOADS_DIR
+    BASE_DOWNLOADS_DIR = sanitize_name(BASE_DOWNLOADS_DIR)
+    
+    try:
+        os.mkdir(BASE_DOWNLOADS_DIR)
+    except Exception:
+        pass
+
     for event in events:
-        path = event
-        os.mkdir(path)
-        event_id, name, sections = parse_event(event)
+        event_id, event_name, sections = parse_event(event)
+        event_name = sanitize_name(event_name)
+        path = os.path.join(BASE_DOWNLOADS_DIR, event_name)
+
+        try:
+            os.mkdir(path)
+        except Exception as e:
+            pass
 
         for section in sections:
-            path = os.path.join(event, section)
-            os.mkdir(path)
-            section_id, name, challenges = parse_section(section)
+            section_id, section_name, challenges = parse_section(section)
+            section_name = sanitize_name(section_name)
+            path = os.path.join(BASE_DOWNLOADS_DIR, event_name, section_name)
+            
+            try:
+                os.mkdir(path)
+            except Exception as e:
+                pass
 
             for challenge in challenges:
-                challenge_id, challenge_name, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = scrape_challenge(challenge)
-                path = os.path.join(event, section, challenge_name)
-                os.mkdir(path)
+                challenge_id, challenge_name, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves = scrape_challenge(challenge)
+                challenge_name = sanitize_name(challenge_name)
+                path = os.path.join(BASE_DOWNLOADS_DIR, event_name, section_name, challenge_name)
+                
+                
+                try:
+                    os.mkdir(path)
+                except Exception as e:
+                    pass
 
                 for file in files:
                     print("Downloading file", file, " in ", path)
-                    download_file(file, path)
+
+                    try:
+                        download_file(file, path)
+                    except Exception as e:
+                        pass
 
 
 
