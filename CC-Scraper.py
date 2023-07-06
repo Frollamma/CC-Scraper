@@ -115,9 +115,18 @@ def parse_challenge(challenge):
     
     return challenge_id, title, description, files, hints, tags, current_score, current_affiliation_solves, current_global_solves, solves
     
+def save_description(challenge_name, challenge_description, file_path):
+    path = os.path.join(file_path, challenge_name + ".txt")
+
+    # Save challenge description
+    print(f"Saving challenge description: {path}")
+    with open(path, "w") as f:
+        f.write(challenge_description)
+
 def download_file(file_dict, file_path):
     file_name = file_dict["name"]
     file_url = file_dict["url"]
+    path = os.path.join(file_path, file_name)
 
     # When you download a file you use a url like this: https://ctf.cyberchallenge.it/api/file/514c93c2-5dab-498e-90db-de7e2a0ca5d6/chall2.pcap?download=&auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ODUzLCJpYXQiOjE2ODg2Mzg5MzksImV4cCI6MTY4ODY4MjEzOX0.ald2V0Dl07-lW-f6soGlSC9mP3n_AVZ3D-1zGX9VKhw, while the "files" part in the response of the challenge view is like this:
     # {
@@ -132,7 +141,6 @@ def download_file(file_dict, file_path):
 
     res = s.get(BASE_URL + file_url)
     file_content = res.content
-    path = os.path.join(file_path, file_name)
 
     with open(path, "wb") as f:
         f.write(file_content)
@@ -173,7 +181,8 @@ def main():
     
     try:
         os.mkdir(BASE_DOWNLOADS_DIR)
-    except Exception:
+    except Exception as e:
+        # raise e
         pass
 
     for event in events:
@@ -184,6 +193,7 @@ def main():
         try:
             os.mkdir(path)
         except Exception as e:
+            raise e
             pass
 
         for section in sections:
@@ -194,6 +204,7 @@ def main():
             try:
                 os.mkdir(path)
             except Exception as e:
+                raise e
                 pass
 
             for challenge in challenges:
@@ -205,14 +216,17 @@ def main():
                 try:
                     os.mkdir(path)
                 except Exception as e:
+                    raise e
                     pass
 
+                save_description(challenge_name, description, path)
                 for file in files:
-                    print("Downloading file", file, " in ", path)
+                    print("Downloading file ", file, " in ", path)
 
                     try:
                         download_file(file, path)
                     except Exception as e:
+                        raise e
                         pass
 
 
